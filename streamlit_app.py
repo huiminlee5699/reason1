@@ -76,15 +76,8 @@ st.markdown("""
 st.title("🤖 AI Reasoning Chat")
 st.write("Chat interface with visible AI reasoning process for research purposes.")
 
-# Get API key from secrets or user input
-openai_api_key = st.secrets.get("OPENAI_API_KEY", None)
-
-if not openai_api_key:
-    openai_api_key = st.text_input("OpenAI API Key", type="password")
-    
-if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
-else:
+# Get API key from secrets
+openai_api_key = st.secrets["OPENAI_API_KEY"]
     # Create OpenAI client
     client = OpenAI(api_key=openai_api_key)
     
