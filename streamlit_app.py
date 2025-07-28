@@ -203,11 +203,11 @@ st.markdown("""
         line-height: 1.5 !important;
     }
     
-    /* Style for reasoning history expanders */
+    /* Style for reasoning history expanders - make them look integrated */
     details[data-testid="stExpander"] {
         border: none !important;
         border-radius: 0 !important;
-        margin: 12px 0 0 0 !important;
+        margin: 8px 0 0 0 !important;
         background-color: transparent !important;
         box-shadow: none !important;
     }
@@ -215,31 +215,30 @@ st.markdown("""
     details[data-testid="stExpander"] summary {
         padding: 8px 0 !important;
         cursor: pointer !important;
-        font-size: 13px !important;
-        color: #6b7280 !important;
+        font-size: 12px !important;
+        color: #9ca3af !important;
         border-radius: 0 !important;
         background: none !important;
         border: none !important;
         border-top: 1px solid #e1e5e9 !important;
-        margin-top: 8px !important;
+        margin: 8px 0 0 0 !important;
+        text-align: center !important;
     }
     
     details[data-testid="stExpander"] summary:hover {
-        background-color: rgba(243, 244, 246, 0.5) !important;
-        color: #4b5563 !important;
+        background-color: rgba(243, 244, 246, 0.3) !important;
+        color: #6b7280 !important;
     }
     
-    details[data-testid="stExpander"][open] summary {
-        margin-bottom: 12px !important;
-    }
-    
-    /* Style the expander content to look like expanded reasoning */
+    /* Style the expander content to look seamless */
     .streamlit-expanderContent {
-        background-color: #f8f9fa !important;
+        background-color: transparent !important;
         border: none !important;
         border-radius: 0 !important;
-        padding: 0 !important;
+        padding: 8px 0 0 0 !important;
         margin: 0 !important;
+        max-height: 250px !important;
+        overflow-y: auto !important;
     }
 </style>
 
@@ -333,36 +332,30 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     reasoning_container = st.container()
     
     with reasoning_container:
-        # Create a placeholder for the reasoning box content
-        box_content = st.empty()
-        expander_content = st.empty()
+        # Create a placeholder for the entire reasoning section
+        reasoning_placeholder = st.empty()
         
         for i, step in enumerate(reasoning_steps):
             # Add current step to history
             st.session_state.current_reasoning_history.append(step)
             
-            # Update the main reasoning box with current step
-            box_content.markdown(f"""
-            <div class="reasoning-block">
-                {step}
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Update the dropdown with all accumulated reasoning
-            with expander_content.container():
-                with st.expander("▼ Show all reasoning", expanded=False):
-                    st.markdown("""
-                    <div style="max-height: 300px; overflow-y: auto; padding: 8px;">
-                    """, unsafe_allow_html=True)
-                    
+            # Create the complete reasoning section with dropdown inside
+            with reasoning_placeholder.container():
+                # Main grey box with current reasoning and integrated dropdown
+                st.markdown(f"""
+                <div class="reasoning-block">
+                    {step}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Dropdown inside the same visual container
+                with st.expander("▼", expanded=False):
                     for j, hist_step in enumerate(st.session_state.current_reasoning_history):
                         st.markdown(f"""
-                        <div style="margin-bottom: 16px; padding: 12px; background-color: #fafafa; border-radius: 6px; border-left: 3px solid #e1e5e9;">
+                        <div style="margin-bottom: 12px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
                             {hist_step}
                         </div>
                         """, unsafe_allow_html=True)
-                    
-                    st.markdown("</div>", unsafe_allow_html=True)
             
             time.sleep(2.5)  # Time to read the reasoning step
     
