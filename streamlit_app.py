@@ -51,13 +51,37 @@ st.markdown("""
         animation: fadeIn 0.5s ease-in;
     }
     
-    .reasoning-header {
-        font-weight: 600;
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .action-button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
         color: #6b7280;
-        margin-bottom: 8px;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        font-size: 14px;
+        transition: background-color 0.2s;
+    }
+    
+    .action-button:hover {
+        background-color: #f3f4f6;
+    }
+    
+    .done-indicator {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #10b981;
+        font-size: 14px;
+        margin-top: 12px;
+        font-weight: 500;
     }
     
     .thinking-indicator {
@@ -120,9 +144,31 @@ for message in st.session_state.messages:
         # If it's an assistant message with reasoning, show the dropdown
         if message["role"] == "assistant" and "reasoning" in message:
             thinking_duration = message.get("thinking_duration", 0)
-            with st.expander(f"💭 Thought for {thinking_duration} seconds"):
+            with st.expander(f"Thought for {thinking_duration} seconds"):
                 for i, step in enumerate(message["reasoning"], 1):
                     st.markdown(f"**Step {i}:** {step}")
+                
+                # Add "Done" indicator at the end
+                st.markdown("""
+                <div class="done-indicator">
+                    ✓ Done
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Add action buttons (copy, upvote, downvote)
+            st.markdown("""
+            <div class="action-buttons">
+                <button class="action-button" onclick="navigator.clipboard.writeText(document.querySelector('.stMarkdown').innerText)">
+                    📋 Copy
+                </button>
+                <button class="action-button">
+                    👍 Upvote
+                </button>
+                <button class="action-button">
+                    👎 Downvote
+                </button>
+            </div>
+            """, unsafe_allow_html=True)
 
 # Chat input
 if prompt := st.chat_input("Ask me anything..."):
@@ -142,19 +188,9 @@ if prompt := st.chat_input("Ask me anything..."):
         # Display reasoning steps with animation (each one replaces the previous)
         reasoning_container = st.empty()
         for i, step in enumerate(reasoning_steps):
-            # Show thinking indicator
-            reasoning_container.markdown(f"""
-            <div class="thinking-indicator">
-                🧠 Thinking<span class="dot-animation">...</span>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            time.sleep(1.0)  # Brief thinking pause
-            
             # Show reasoning step (replaces previous)
             reasoning_container.markdown(f"""
             <div class="reasoning-block">
-                <div class="reasoning-header">🧠 Reasoning</div>
                 {step}
             </div>
             """, unsafe_allow_html=True)
@@ -170,11 +206,6 @@ if prompt := st.chat_input("Ask me anything..."):
         
         # Generate final response
         final_thinking_container = st.empty()
-        final_thinking_container.markdown("""
-        <div class="thinking-indicator">
-            🤖 Generating final response<span class="dot-animation">...</span>
-        </div>
-        """, unsafe_allow_html=True)
         time.sleep(1)
         final_thinking_container.empty()
         
@@ -191,9 +222,31 @@ if prompt := st.chat_input("Ask me anything..."):
         response = st.write_stream(stream)
         
         # Add the "Thought for X seconds" dropdown after the response
-        with st.expander(f"💭 Thought for {thinking_duration} seconds"):
+        with st.expander(f"Thought for {thinking_duration} seconds"):
             for i, step in enumerate(reasoning_steps, 1):
                 st.markdown(f"**Step {i}:** {step}")
+            
+            # Add "Done" indicator at the end
+            st.markdown("""
+            <div class="done-indicator">
+                ✓ Done
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Add action buttons (copy, upvote, downvote)
+        st.markdown("""
+        <div class="action-buttons">
+            <button class="action-button" onclick="navigator.clipboard.writeText(document.querySelector('.stMarkdown').innerText)">
+                📋 Copy
+            </button>
+            <button class="action-button">
+                👍 Upvote
+            </button>
+            <button class="action-button">
+                👎 Downvote
+            </button>
+        </div>
+        """, unsafe_allow_html=True)
         
         # Store message with reasoning and timing
         message_data = {
