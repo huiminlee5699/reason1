@@ -48,20 +48,27 @@ st.markdown("""
         padding: 20px;
     }
     
-    .reasoning-block {
+    .reasoning-section {
         background-color: #f8f9fa;
         border: 1px solid #e1e5e9;
         border-radius: 8px;
         padding: 16px;
         margin: 8px 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 16px;
         color: #2d2d2d;
         max-width: 80%;
         text-align: left;
         position: relative;
+    }
+    
+    .reasoning-content {
+        font-size: 16px;
         line-height: 1.5;
+    }
+    
+    .current-reasoning-text {
         animation: fadeIn 0.3s ease-in;
+        margin-bottom: 8px;
     }
     
     .user-message {
@@ -279,34 +286,20 @@ for message in st.session_state.messages:
         </div>
         """, unsafe_allow_html=True)
         
-        # If it's an assistant message with reasoning, show the dropdown
-        if "reasoning" in message:
-            thinking_duration = message.get("thinking_duration", 0)
-            with st.expander(f"Thought for {thinking_duration} seconds"):
-                for i, step in enumerate(message["reasoning"], 1):
-                    st.markdown(f"**Step {i}:** {step}")
-                
-                # Add "Done" indicator at the end
-                st.markdown("""
-                <div class="done-indicator">
-                    ✓ Done
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Add action buttons (copy, upvote, downvote)
-            st.markdown("""
-            <div class="action-buttons">
-                <button class="action-button" onclick="navigator.clipboard.writeText(document.querySelector('.assistant-message').innerText)" title="Copy">
-                    📋
-                </button>
-                <button class="action-button" title="Upvote">
-                    👍
-                </button>
-                <button class="action-button" title="Downvote">
-                    👎
-                </button>
-            </div>
-            """, unsafe_allow_html=True)
+        # Add action buttons (copy, upvote, downvote)
+        st.markdown("""
+        <div class="action-buttons">
+            <button class="action-button" onclick="navigator.clipboard.writeText(document.querySelector('.assistant-message').innerText)" title="Copy">
+                📋
+            </button>
+            <button class="action-button" title="Upvote">
+                👍
+            </button>
+            <button class="action-button" title="Downvote">
+                👎
+            </button>
+        </div>
+        """, unsafe_allow_html=True)
 
 # Chat input
 if prompt := st.chat_input("Ask anything..."):
@@ -328,55 +321,52 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     # Track timing for the "Thought for X seconds" feature
     start_time = time.time()
     
-    # Display reasoning in one persistent box that updates content
-    reasoning_container = st.container()
+    # Display reasoning as one unified section with grey background
+    reasoning_section = st.empty()
     
-    with reasoning_container:
-        # Create a placeholder for the entire reasoning section
-        reasoning_placeholder = st.empty()
+    with reasoning_section.container():
+        # Create one reasoning section container
+        st.markdown("""
+        <div class="reasoning-section">
+            <div class="reasoning-content">
+        """, unsafe_allow_html=True)
+        
+        # Create placeholders for dynamic content
+        current_text = st.empty()
+        dropdown_area = st.empty()
+        
+        st.markdown("""
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
         for i, step in enumerate(reasoning_steps):
             # Add current step to history
             st.session_state.current_reasoning_history.append(step)
             
-            # Create the complete reasoning section with dropdown inside
-            with reasoning_placeholder.container():
-                # Main grey box with current reasoning and integrated dropdown
-                st.markdown(f"""
-                <div class="reasoning-block">
-                    {step}
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Dropdown inside the same visual container
+            # Update current reasoning text
+            current_text.markdown(f"""
+            <div class="current-reasoning-text">
+                {step}
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Update dropdown with all accumulated reasoning
+            with dropdown_area.container():
                 with st.expander("▼", expanded=False):
                     for j, hist_step in enumerate(st.session_state.current_reasoning_history):
-                        st.markdown(f"""
-                        <div style="margin-bottom: 12px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
-                            {hist_step}
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.write(hist_step)
+                        if j < len(st.session_state.current_reasoning_history) - 1:
+                            st.markdown("---")
             
             time.sleep(2.5)  # Time to read the reasoning step
     
     # Clear the reasoning container
     reasoning_container.empty()
     
-    # Calculate total thinking time
+    # Calculate total thinking time but don't show the "Thought for X seconds" expander
     end_time = time.time()
     thinking_duration = int(end_time - start_time)
-    
-    # Show the "Thought for X seconds" dropdown FIRST
-    with st.expander(f"Thought for {thinking_duration} seconds"):
-        for i, step in enumerate(reasoning_steps, 1):
-            st.markdown(f"**Step {i}:** {step}")
-        
-        # Add "Done" indicator at the end
-        st.markdown("""
-        <div class="done-indicator">
-            ✓ Done
-        </div>
-        """, unsafe_allow_html=True)
     
     # Get actual response from OpenAI
     try:
@@ -417,12 +407,10 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
         </div>
         """, unsafe_allow_html=True)
         
-        # Store message with reasoning and timing
+        # Store message with reasoning and timing (but don't include reasoning since it's already shown)
         message_data = {
             "role": "assistant", 
-            "content": full_response, 
-            "reasoning": reasoning_steps,
-            "thinking_duration": thinking_duration
+            "content": full_response
         }
         st.session_state.messages.append(message_data)
         
