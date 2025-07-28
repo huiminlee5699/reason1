@@ -48,29 +48,6 @@ st.markdown("""
         padding: 20px;
     }
     
-    .reasoning-section {
-        background-color: #f8f9fa;
-        border: 1px solid #e1e5e9;
-        border-radius: 8px;
-        padding: 16px;
-        margin: 8px 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        color: #2d2d2d;
-        max-width: 80%;
-        text-align: left;
-        position: relative;
-    }
-    
-    .reasoning-content {
-        font-size: 16px;
-        line-height: 1.5;
-    }
-    
-    .current-reasoning-text {
-        animation: fadeIn 0.3s ease-in;
-        margin-bottom: 8px;
-    }
-    
     .user-message {
         background-color: #f0f0f0;
         border: 1px solid #d1d5db;
@@ -134,22 +111,8 @@ st.markdown("""
         font-weight: 500;
     }
     
-    .fade-transition {
-        animation: fadeOut 0.4s ease-out, fadeIn 0.4s ease-in 0.4s;
-    }
-    
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    @keyframes fadeOut {
-        from { opacity: 1; }
-        to { opacity: 0.2; }
-    }
-    
-    @keyframes slideDown {
-        from { opacity: 0; transform: translateY(-10px); }
         to { opacity: 1; transform: translateY(0); }
     }
     
@@ -166,13 +129,6 @@ st.markdown("""
         background: none !important;
         border: none !important;
         padding: 0 !important;
-    }
-    
-    /* Center the chat input initially */
-    .initial-input-container {
-        display: flex;
-        justify-content: center;
-        margin: 40px 0;
     }
     
     /* Auto-expanding chat input */
@@ -198,58 +154,74 @@ st.markdown("""
         padding-right: 2rem;
     }
     
-    /* Improved expander styling */
-    .streamlit-expanderHeader {
-        font-size: 14px !important;
-        font-weight: 500 !important;
-        color: #6b7280 !important;
+    /* Grey reasoning dropdown styling */
+    .reasoning-dropdown {
+        background-color: #f8f9fa !important;
+        border: 1px solid #e1e5e9 !important;
+        border-radius: 8px !important;
+        margin: 16px 0 !important;
+        animation: fadeIn 0.3s ease-in;
     }
     
-    .streamlit-expanderContent {
-        font-size: 14px !important;
-        line-height: 1.5 !important;
-    }
-    
-    /* Style for reasoning history expanders - make them look integrated */
+    /* Style for reasoning expander */
     details[data-testid="stExpander"] {
-        border: none !important;
-        border-radius: 0 !important;
-        margin: 8px 0 0 0 !important;
-        background-color: transparent !important;
+        background-color: #f8f9fa !important;
+        border: 1px solid #e1e5e9 !important;
+        border-radius: 8px !important;
+        margin: 16px 0 !important;
         box-shadow: none !important;
     }
     
     details[data-testid="stExpander"] summary {
-        padding: 8px 0 !important;
+        padding: 16px !important;
         cursor: pointer !important;
-        font-size: 12px !important;
-        color: #9ca3af !important;
-        border-radius: 0 !important;
-        background: none !important;
+        font-size: 14px !important;
+        color: #6b7280 !important;
+        border-radius: 8px !important;
+        background-color: #f8f9fa !important;
         border: none !important;
-        border-top: 1px solid #e1e5e9 !important;
-        margin: 8px 0 0 0 !important;
-        text-align: center !important;
+        margin: 0 !important;
+        font-weight: 500 !important;
     }
     
     details[data-testid="stExpander"] summary:hover {
-        background-color: rgba(243, 244, 246, 0.3) !important;
-        color: #6b7280 !important;
+        background-color: #f1f3f4 !important;
+        color: #4b5563 !important;
     }
     
-    /* Style the expander content to look seamless */
+    details[data-testid="stExpander"][open] summary {
+        border-bottom: 1px solid #e1e5e9 !important;
+        border-radius: 8px 8px 0 0 !important;
+        margin-bottom: 0 !important;
+    }
+    
+    /* Style the expander content */
     .streamlit-expanderContent {
-        background-color: transparent !important;
+        background-color: #f8f9fa !important;
         border: none !important;
-        border-radius: 0 !important;
-        padding: 8px 0 0 0 !important;
+        border-radius: 0 0 8px 8px !important;
+        padding: 0 16px 16px 16px !important;
         margin: 0 !important;
-        max-height: 250px !important;
-        overflow-y: auto !important;
+    }
+    
+    .reasoning-step {
+        margin-bottom: 16px;
+        padding: 12px;
+        background-color: #ffffff;
+        border-radius: 6px;
+        border-left: 3px solid #e1e5e9;
+        line-height: 1.5;
+        font-size: 16px;
+        color: #2d2d2d;
+    }
+    
+    .current-step {
+        font-size: 16px;
+        color: #2d2d2d;
+        line-height: 1.5;
+        padding: 0 16px 16px 16px;
     }
 </style>
-
-
 """, unsafe_allow_html=True)
 
 # Show title
@@ -286,20 +258,38 @@ for message in st.session_state.messages:
         </div>
         """, unsafe_allow_html=True)
         
-        # Add action buttons (copy, upvote, downvote)
-        st.markdown("""
-        <div class="action-buttons">
-            <button class="action-button" onclick="navigator.clipboard.writeText(document.querySelector('.assistant-message').innerText)" title="Copy">
-                📋
-            </button>
-            <button class="action-button" title="Upvote">
-                👍
-            </button>
-            <button class="action-button" title="Downvote">
-                👎
-            </button>
-        </div>
-        """, unsafe_allow_html=True)
+        # If it's an assistant message with reasoning, show the dropdown
+        if "reasoning" in message:
+            thinking_duration = message.get("thinking_duration", 0)
+            with st.expander(f"Thought for {thinking_duration} seconds", expanded=False):
+                for i, step in enumerate(message["reasoning"], 1):
+                    st.markdown(f"""
+                    <div class="reasoning-step">
+                        <strong>Step {i}:</strong> {step}
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Add "Done" indicator at the end
+                st.markdown("""
+                <div class="done-indicator">
+                    ✓ Done
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Add action buttons (copy, upvote, downvote)
+            st.markdown("""
+            <div class="action-buttons">
+                <button class="action-button" onclick="navigator.clipboard.writeText(document.querySelector('.assistant-message').innerText)" title="Copy">
+                    📋
+                </button>
+                <button class="action-button" title="Upvote">
+                    👍
+                </button>
+                <button class="action-button" title="Downvote">
+                    👎
+                </button>
+            </div>
+            """, unsafe_allow_html=True)
 
 # Chat input
 if prompt := st.chat_input("Ask anything..."):
@@ -321,52 +311,69 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     # Track timing for the "Thought for X seconds" feature
     start_time = time.time()
     
-    # Display reasoning as one unified section with grey background
-    reasoning_section = st.empty()
+    # Create the reasoning dropdown that will be updated dynamically
+    reasoning_container = st.container()
     
-    with reasoning_section.container():
-        # Create one reasoning section container
-        st.markdown("""
-        <div class="reasoning-section">
-            <div class="reasoning-content">
-        """, unsafe_allow_html=True)
-        
-        # Create placeholders for dynamic content
-        current_text = st.empty()
-        dropdown_area = st.empty()
-        
-        st.markdown("""
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    with reasoning_container:
+        # Create a placeholder for the dynamic reasoning display
+        reasoning_placeholder = st.empty()
         
         for i, step in enumerate(reasoning_steps):
             # Add current step to history
             st.session_state.current_reasoning_history.append(step)
             
-            # Update current reasoning text
-            current_text.markdown(f"""
-            <div class="current-reasoning-text">
-                {step}
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Update dropdown with all accumulated reasoning
-            with dropdown_area.container():
-                with st.expander("▼", expanded=False):
+            # Update the reasoning display
+            with reasoning_placeholder.container():
+                # Create the grey reasoning box with expander
+                st.markdown(f"""
+                <div style="background-color: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 8px; margin: 16px 0; animation: fadeIn 0.3s ease-in;">
+                """, unsafe_allow_html=True)
+                
+                # Use expander with dynamic content
+                with st.expander(f"▼ Thinking... step {i+1}/{len(reasoning_steps)}", expanded=False):
+                    # When expanded, show all steps accumulated so far
+                    st.markdown("<div style='max-height: 300px; overflow-y: auto;'>", unsafe_allow_html=True)
                     for j, hist_step in enumerate(st.session_state.current_reasoning_history):
-                        st.write(hist_step)
-                        if j < len(st.session_state.current_reasoning_history) - 1:
-                            st.markdown("---")
+                        st.markdown(f"""
+                        <div class="reasoning-step">
+                            <strong>Step {j+1}:</strong> {hist_step}
+                        </div>
+                        """, unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
+                
+                # Always show current step outside expander (visible when collapsed)
+                st.markdown(f"""
+                <div style="padding: 0 16px 16px 16px; font-size: 16px; color: #2d2d2d; line-height: 1.5;">
+                    {step}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown("</div>", unsafe_allow_html=True)
             
             time.sleep(2.5)  # Time to read the reasoning step
     
     # Clear the reasoning container
     reasoning_container.empty()
     
-    # Calculate total thinking time but don't show the "Thought for X seconds" expander
+    # Calculate total thinking time
     end_time = time.time()
     thinking_duration = int(end_time - start_time)
+    
+    # Show the final "Thought for X seconds" dropdown
+    with st.expander(f"Thought for {thinking_duration} seconds", expanded=False):
+        for i, step in enumerate(reasoning_steps, 1):
+            st.markdown(f"""
+            <div class="reasoning-step">
+                <strong>Step {i}:</strong> {step}
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Add "Done" indicator at the end
+        st.markdown("""
+        <div class="done-indicator">
+            ✓ Done
+        </div>
+        """, unsafe_allow_html=True)
     
     # Get actual response from OpenAI
     try:
@@ -407,17 +414,19 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
         </div>
         """, unsafe_allow_html=True)
         
-        # Store message with reasoning and timing (but don't include reasoning since it's already shown)
+        # Store message with reasoning and timing
         message_data = {
             "role": "assistant", 
-            "content": full_response
+            "content": full_response, 
+            "reasoning": reasoning_steps,
+            "thinking_duration": thinking_duration
         }
         st.session_state.messages.append(message_data)
         
     except Exception as e:
         st.error(f"Error generating response: {str(e)}")
 
-# Add JavaScript for auto-resizing functionality (this works in Streamlit)
+# Add JavaScript for auto-resizing functionality
 st.components.v1.html("""
 <script>
 function setupAutoResize() {
