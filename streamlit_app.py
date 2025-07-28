@@ -43,7 +43,7 @@ st.markdown("""
     }
     
     .chat-container {
-        max-width: 800px;
+        max-width: 900px;
         margin: 0 auto;
         padding: 20px;
     }
@@ -60,6 +60,36 @@ st.markdown("""
         animation: fadeIn 0.3s ease-in;
         max-width: 80%;
         text-align: left;
+        position: relative;
+    }
+    
+    .reasoning-dropdown {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #9ca3af;
+        font-size: 12px;
+        padding: 4px;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+    }
+    
+    .reasoning-dropdown:hover {
+        background-color: #e5e7eb;
+    }
+    
+    .reasoning-history {
+        background-color: #ffffff;
+        border: 1px solid #e1e5e9;
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 8px;
+        max-height: 200px;
+        overflow-y: auto;
+        font-size: 12px;
     }
     
     .user-message {
@@ -124,7 +154,7 @@ st.markdown("""
     }
     
     .fade-transition {
-        animation: fadeOut 0.2s ease-out, fadeIn 0.2s ease-in 0.2s;
+        animation: fadeOut 0.4s ease-out, fadeIn 0.4s ease-in 0.4s;
     }
     
     @keyframes fadeIn {
@@ -134,7 +164,7 @@ st.markdown("""
     
     @keyframes fadeOut {
         from { opacity: 1; }
-        to { opacity: 0.3; }
+        to { opacity: 0.2; }
     }
     
     /* Hide default Streamlit chat styling */
@@ -159,8 +189,13 @@ st.markdown("""
         margin: 40px 0;
     }
     
-    .stChatInput {
-        max-width: 600px;
+    /* Force chat input to be single line */
+    .stChatInput textarea {
+        height: 48px !important;
+        min-height: 48px !important;
+        max-height: 48px !important;
+        resize: none !important;
+        overflow-y: hidden !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -177,6 +212,8 @@ client = OpenAI(api_key=openai_api_key)
 # Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "current_reasoning_history" not in st.session_state:
+    st.session_state.current_reasoning_history = []
 
 
 
@@ -236,32 +273,55 @@ if prompt := st.chat_input("Ask anything..."):
     
 # Generate AI response if there's a new user message
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
+    # Reset reasoning history for new conversation
+    st.session_state.current_reasoning_history = []
+    
     # Generate reasoning steps for the credibility task
     reasoning_steps = generate_reasoning_steps_for_credibility_task()
     
     # Track timing for the "Thought for X seconds" feature
     start_time = time.time()
     
-    # Display reasoning steps with blinking animation (each one replaces the previous)
+    # Display reasoning steps with blinking animation and dropdown functionality
     reasoning_container = st.empty()
     for i, step in enumerate(reasoning_steps):
-        # Show reasoning step
+        # Add current step to history
+        st.session_state.current_reasoning_history.append(step)
+        
+        # Create unique key for this step's expander
+        step_key = f"reasoning_step_{i}"
+        
+        # Show reasoning step with dropdown button
         reasoning_container.markdown(f"""
         <div class="reasoning-block">
+            <button class="reasoning-dropdown" onclick="document.getElementById('{step_key}').style.display = document.getElementById('{step_key}').style.display === 'none' ? 'block' : 'none'">
+                ▼
+            </button>
             {step}
+            <div id="{step_key}" class="reasoning-history" style="display: none;">
+                <strong>Reasoning History:</strong><br>
+                {'<br><br>'.join([f"<strong>Step {j+1}:</strong> {hist_step}" for j, hist_step in enumerate(st.session_state.current_reasoning_history)])}
+            </div>
         </div>
         """, unsafe_allow_html=True)
         
-        time.sleep(2.0)  # Time to read the reasoning step
+        time.sleep(2.5)  # Longer time to read the reasoning step
         
-        # Brief fade effect before next step
+        # Enhanced fade effect before next step
         if i < len(reasoning_steps) - 1:  # Don't fade the last step
             reasoning_container.markdown(f"""
             <div class="reasoning-block fade-transition">
+                <button class="reasoning-dropdown" onclick="document.getElementById('{step_key}_fade').style.display = document.getElementById('{step_key}_fade').style.display === 'none' ? 'block' : 'none'">
+                    ▼
+                </button>
                 {step}
+                <div id="{step_key}_fade" class="reasoning-history" style="display: none;">
+                    <strong>Reasoning History:</strong><br>
+                    {'<br><br>'.join([f"<strong>Step {j+1}:</strong> {hist_step}" for j, hist_step in enumerate(st.session_state.current_reasoning_history)])}
+                </div>
             </div>
             """, unsafe_allow_html=True)
-            time.sleep(0.4)  # Brief fade duration
+            time.sleep(0.8)  # Longer fade duration for better visibility
     
     # Clear the reasoning container
     reasoning_container.empty()
@@ -269,6 +329,18 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     # Calculate total thinking time
     end_time = time.time()
     thinking_duration = int(end_time - start_time)
+    
+    # Show the "Thought for X seconds" dropdown FIRST
+    with st.expander(f"Thought for {thinking_duration} seconds"):
+        for i, step in enumerate(reasoning_steps, 1):
+            st.markdown(f"**Step {i}:** {step}")
+        
+        # Add "Done" indicator at the end
+        st.markdown("""
+        <div class="done-indicator">
+            ✓ Done
+        </div>
+        """, unsafe_allow_html=True)
     
     # Get actual response from OpenAI
     try:
@@ -293,18 +365,6 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     {full_response}
                 </div>
                 """, unsafe_allow_html=True)
-        
-        # Add the "Thought for X seconds" dropdown after the response
-        with st.expander(f"Thought for {thinking_duration} seconds"):
-            for i, step in enumerate(reasoning_steps, 1):
-                st.markdown(f"**Step {i}:** {step}")
-            
-            # Add "Done" indicator at the end
-            st.markdown("""
-            <div class="done-indicator">
-                ✓ Done
-            </div>
-            """, unsafe_allow_html=True)
         
         # Add action buttons (copy, upvote, downvote)
         st.markdown("""
