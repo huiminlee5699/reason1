@@ -43,7 +43,7 @@ st.markdown("""
     }
     
     .chat-container {
-        max-width: 900px;
+        max-width: 1000px;
         margin: 0 auto;
         padding: 20px;
     }
@@ -55,7 +55,7 @@ st.markdown("""
         padding: 16px;
         margin: 8px 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 14px;
+        font-size: 16px;
         color: #2d2d2d;
         animation: fadeIn 0.3s ease-in;
         max-width: 80%;
@@ -71,14 +71,16 @@ st.markdown("""
         border: none;
         cursor: pointer;
         color: #9ca3af;
-        font-size: 12px;
-        padding: 4px;
+        font-size: 14px;
+        padding: 4px 8px;
         border-radius: 4px;
-        transition: background-color 0.2s;
+        transition: all 0.2s;
+        z-index: 10;
     }
     
     .reasoning-dropdown:hover {
         background-color: #e5e7eb;
+        color: #6b7280;
     }
     
     .reasoning-history {
@@ -86,10 +88,16 @@ st.markdown("""
         border: 1px solid #e1e5e9;
         border-radius: 8px;
         padding: 12px;
-        margin-top: 8px;
-        max-height: 200px;
+        margin-top: 12px;
+        max-height: 300px;
         overflow-y: auto;
-        font-size: 12px;
+        font-size: 14px;
+        display: none;
+        animation: slideDown 0.3s ease-out;
+    }
+    
+    .reasoning-history.show {
+        display: block;
     }
     
     .user-message {
@@ -100,8 +108,9 @@ st.markdown("""
         margin: 8px 0 8px auto;
         max-width: 70%;
         text-align: left;
-        font-size: 14px;
+        font-size: 16px;
         color: #2d2d2d;
+        line-height: 1.5;
     }
     
     .assistant-message {
@@ -110,8 +119,9 @@ st.markdown("""
         margin: 8px 0;
         max-width: 100%;
         text-align: left;
-        font-size: 14px;
+        font-size: 16px;
         color: #2d2d2d;
+        line-height: 1.6;
     }
     
     .action-buttons {
@@ -167,6 +177,11 @@ st.markdown("""
         to { opacity: 0.2; }
     }
     
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
     /* Hide default Streamlit chat styling */
     .stChatMessage {
         background: none !important;
@@ -189,15 +204,81 @@ st.markdown("""
         margin: 40px 0;
     }
     
-    /* Force chat input to be single line */
+    /* Auto-expanding chat input */
+    .stChatInput {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    
     .stChatInput textarea {
-        height: 48px !important;
         min-height: 48px !important;
-        max-height: 48px !important;
+        max-height: 200px !important;
         resize: none !important;
-        overflow-y: hidden !important;
+        font-size: 16px !important;
+        line-height: 1.5 !important;
+        overflow-y: auto !important;
+        transition: height 0.2s ease !important;
+    }
+    
+    /* Make container wider */
+    .main .block-container {
+        max-width: 1000px;
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+    
+    /* Improved expander styling */
+    .streamlit-expanderHeader {
+        font-size: 14px !important;
+        font-weight: 500 !important;
+    }
+    
+    .streamlit-expanderContent {
+        font-size: 14px !important;
+        line-height: 1.5 !important;
     }
 </style>
+
+<script>
+function toggleReasoningHistory(elementId) {
+    const element = document.getElementById(elementId);
+    const button = element.previousElementSibling;
+    
+    if (element.style.display === 'none' || element.style.display === '') {
+        element.style.display = 'block';
+        element.classList.add('show');
+        button.innerHTML = '▲';
+    } else {
+        element.style.display = 'none';
+        element.classList.remove('show');
+        button.innerHTML = '▼';
+    }
+}
+
+// Auto-resize textarea function
+function autoResize() {
+    const textareas = document.querySelectorAll('.stChatInput textarea');
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+        });
+        
+        textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                setTimeout(() => {
+                    this.style.height = '48px';
+                }, 100);
+            }
+        });
+    });
+}
+
+// Run auto-resize when page loads
+document.addEventListener('DOMContentLoaded', autoResize);
+// Also run when Streamlit reruns
+setTimeout(autoResize, 100);
+</script>
 """, unsafe_allow_html=True)
 
 # Show title
@@ -214,8 +295,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "current_reasoning_history" not in st.session_state:
     st.session_state.current_reasoning_history = []
-
-
+if "reasoning_step_counter" not in st.session_state:
+    st.session_state.reasoning_step_counter = 0
 
 # Display existing messages with custom styling
 for message in st.session_state.messages:
@@ -275,6 +356,7 @@ if prompt := st.chat_input("Ask anything..."):
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     # Reset reasoning history for new conversation
     st.session_state.current_reasoning_history = []
+    st.session_state.reasoning_step_counter += 1
     
     # Generate reasoning steps for the credibility task
     reasoning_steps = generate_reasoning_steps_for_credibility_task()
@@ -282,46 +364,53 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     # Track timing for the "Thought for X seconds" feature
     start_time = time.time()
     
-    # Display reasoning steps with blinking animation and dropdown functionality
+    # Display reasoning steps with blinking animation and clickable dropdown functionality
     reasoning_container = st.empty()
     for i, step in enumerate(reasoning_steps):
         # Add current step to history
         st.session_state.current_reasoning_history.append(step)
         
-        # Create unique key for this step's expander
-        step_key = f"reasoning_step_{i}"
+        # Create unique key for this step's dropdown
+        step_key = f"reasoning_step_{st.session_state.reasoning_step_counter}_{i}"
         
-        # Show reasoning step with dropdown button
+        # Create the reasoning history HTML
+        reasoning_history_html = '<br><br>'.join([
+            f"<strong>Step {j+1}:</strong> {hist_step}" 
+            for j, hist_step in enumerate(st.session_state.current_reasoning_history)
+        ])
+        
+        # Show reasoning step with clickable dropdown button
         reasoning_container.markdown(f"""
         <div class="reasoning-block">
-            <button class="reasoning-dropdown" onclick="document.getElementById('{step_key}').style.display = document.getElementById('{step_key}').style.display === 'none' ? 'block' : 'none'">
+            <button class="reasoning-dropdown" onclick="toggleReasoningHistory('{step_key}')" title="Show reasoning history">
                 ▼
             </button>
             {step}
-            <div id="{step_key}" class="reasoning-history" style="display: none;">
-                <strong>Reasoning History:</strong><br>
-                {'<br><br>'.join([f"<strong>Step {j+1}:</strong> {hist_step}" for j, hist_step in enumerate(st.session_state.current_reasoning_history)])}
+            <div id="{step_key}" class="reasoning-history">
+                <strong>Reasoning History:</strong><br><br>
+                {reasoning_history_html}
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        time.sleep(2.5)  # Longer time to read the reasoning step
+        time.sleep(2.5)  # Time to read the reasoning step
         
         # Enhanced fade effect before next step
         if i < len(reasoning_steps) - 1:  # Don't fade the last step
+            fade_key = f"reasoning_step_{st.session_state.reasoning_step_counter}_{i}_fade"
             reasoning_container.markdown(f"""
             <div class="reasoning-block fade-transition">
-                <button class="reasoning-dropdown" onclick="document.getElementById('{step_key}_fade').style.display = document.getElementById('{step_key}_fade').style.display === 'none' ? 'block' : 'none'">
+                <button class="reasoning-dropdown" onclick="toggleReasoningHistory('{fade_key}')" title="Show reasoning history">
                     ▼
                 </button>
                 {step}
-                <div id="{step_key}_fade" class="reasoning-history" style="display: none;">
-                    <strong>Reasoning History:</strong><br>
-                    {'<br><br>'.join([f"<strong>Step {j+1}:</strong> {hist_step}" for j, hist_step in enumerate(st.session_state.current_reasoning_history)])}
+                <div id="{fade_key}" class="reasoning-history">
+                    <strong>Reasoning History:</strong><br><br>
+                    {reasoning_history_html}
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            time.sleep(0.8)  # Longer fade duration for better visibility
+            time.sleep(0.8)  # Fade duration
     
     # Clear the reasoning container
     reasoning_container.empty()
@@ -392,3 +481,45 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
         
     except Exception as e:
         st.error(f"Error generating response: {str(e)}")
+
+# Add JavaScript for auto-resizing functionality
+st.markdown("""
+<script>
+// Auto-resize functionality
+function setupAutoResize() {
+    const textareas = document.querySelectorAll('.stChatInput textarea');
+    textareas.forEach(textarea => {
+        if (!textarea.hasAttribute('data-auto-resize-setup')) {
+            textarea.setAttribute('data-auto-resize-setup', 'true');
+            
+            // Set initial height
+            textarea.style.height = '48px';
+            
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+            });
+            
+            textarea.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    setTimeout(() => {
+                        this.style.height = '48px';
+                    }, 100);
+                }
+            });
+            
+            // Reset height when textarea is empty
+            textarea.addEventListener('blur', function() {
+                if (this.value.trim() === '') {
+                    this.style.height = '48px';
+                }
+            });
+        }
+    });
+}
+
+// Run setup periodically to catch new elements
+setInterval(setupAutoResize, 500);
+setupAutoResize();
+</script>
+""", unsafe_allow_html=True)
