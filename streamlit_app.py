@@ -63,43 +63,6 @@ st.markdown("""
         position: relative;
     }
     
-    .reasoning-dropdown {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        background: none;
-        border: none;
-        cursor: pointer;
-        color: #9ca3af;
-        font-size: 14px;
-        padding: 4px 8px;
-        border-radius: 4px;
-        transition: all 0.2s;
-        z-index: 10;
-    }
-    
-    .reasoning-dropdown:hover {
-        background-color: #e5e7eb;
-        color: #6b7280;
-    }
-    
-    .reasoning-history {
-        background-color: #ffffff;
-        border: 1px solid #e1e5e9;
-        border-radius: 8px;
-        padding: 12px;
-        margin-top: 12px;
-        max-height: 300px;
-        overflow-y: auto;
-        font-size: 14px;
-        display: none;
-        animation: slideDown 0.3s ease-out;
-    }
-    
-    .reasoning-history.show {
-        display: block;
-    }
-    
     .user-message {
         background-color: #f0f0f0;
         border: 1px solid #d1d5db;
@@ -231,54 +194,36 @@ st.markdown("""
     .streamlit-expanderHeader {
         font-size: 14px !important;
         font-weight: 500 !important;
+        color: #6b7280 !important;
     }
     
     .streamlit-expanderContent {
         font-size: 14px !important;
         line-height: 1.5 !important;
     }
+    
+    /* Style for reasoning history expanders */
+    details[data-testid="stExpander"] {
+        border: 1px solid #e1e5e9;
+        border-radius: 6px;
+        margin: 8px 0;
+        background-color: #fafafa;
+    }
+    
+    details[data-testid="stExpander"] summary {
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #6b7280;
+        border-radius: 6px;
+    }
+    
+    details[data-testid="stExpander"] summary:hover {
+        background-color: #f3f4f6;
+    }
 </style>
 
-<script>
-function toggleReasoningHistory(elementId) {
-    const element = document.getElementById(elementId);
-    const button = element.previousElementSibling;
-    
-    if (element.style.display === 'none' || element.style.display === '') {
-        element.style.display = 'block';
-        element.classList.add('show');
-        button.innerHTML = '▲';
-    } else {
-        element.style.display = 'none';
-        element.classList.remove('show');
-        button.innerHTML = '▼';
-    }
-}
 
-// Auto-resize textarea function
-function autoResize() {
-    const textareas = document.querySelectorAll('.stChatInput textarea');
-    textareas.forEach(textarea => {
-        textarea.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-        });
-        
-        textarea.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                setTimeout(() => {
-                    this.style.height = '48px';
-                }, 100);
-            }
-        });
-    });
-}
-
-// Run auto-resize when page loads
-document.addEventListener('DOMContentLoaded', autoResize);
-// Also run when Streamlit reruns
-setTimeout(autoResize, 100);
-</script>
 """, unsafe_allow_html=True)
 
 # Show title
@@ -366,51 +311,33 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     
     # Display reasoning steps with blinking animation and clickable dropdown functionality
     reasoning_container = st.empty()
+    
     for i, step in enumerate(reasoning_steps):
         # Add current step to history
         st.session_state.current_reasoning_history.append(step)
         
-        # Create unique key for this step's dropdown
-        step_key = f"reasoning_step_{st.session_state.reasoning_step_counter}_{i}"
-        
-        # Create the reasoning history HTML
-        reasoning_history_html = '<br><br>'.join([
-            f"<strong>Step {j+1}:</strong> {hist_step}" 
-            for j, hist_step in enumerate(st.session_state.current_reasoning_history)
-        ])
-        
-        # Show reasoning step with clickable dropdown button
-        reasoning_container.markdown(f"""
-        <div class="reasoning-block">
-            <button class="reasoning-dropdown" onclick="toggleReasoningHistory('{step_key}')" title="Show reasoning history">
-                ▼
-            </button>
-            {step}
-            <div id="{step_key}" class="reasoning-history">
-                <strong>Reasoning History:</strong><br><br>
-                {reasoning_history_html}
+        # Show current reasoning step in a container
+        with reasoning_container.container():
+            # Current reasoning step
+            st.markdown(f"""
+            <div class="reasoning-block">
+                {step}
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+            
+            # Show expandable history using Streamlit's expander
+            if len(st.session_state.current_reasoning_history) > 1:
+                with st.expander("💭 View reasoning history", expanded=False):
+                    for j, hist_step in enumerate(st.session_state.current_reasoning_history, 1):
+                        st.markdown(f"**Step {j}:** {hist_step}")
         
         time.sleep(2.5)  # Time to read the reasoning step
         
-        # Enhanced fade effect before next step
-        if i < len(reasoning_steps) - 1:  # Don't fade the last step
-            fade_key = f"reasoning_step_{st.session_state.reasoning_step_counter}_{i}_fade"
-            reasoning_container.markdown(f"""
-            <div class="reasoning-block fade-transition">
-                <button class="reasoning-dropdown" onclick="toggleReasoningHistory('{fade_key}')" title="Show reasoning history">
-                    ▼
-                </button>
-                {step}
-                <div id="{fade_key}" class="reasoning-history">
-                    <strong>Reasoning History:</strong><br><br>
-                    {reasoning_history_html}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            time.sleep(0.8)  # Fade duration
+        # Clear for fade effect (except for last step)
+        if i < len(reasoning_steps) - 1:
+            time.sleep(0.3)
+            reasoning_container.empty()
+            time.sleep(0.5)
     
     # Clear the reasoning container
     reasoning_container.empty()
@@ -482,10 +409,9 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     except Exception as e:
         st.error(f"Error generating response: {str(e)}")
 
-# Add JavaScript for auto-resizing functionality
-st.markdown("""
+# Add JavaScript for auto-resizing functionality (this works in Streamlit)
+st.components.v1.html("""
 <script>
-// Auto-resize functionality
 function setupAutoResize() {
     const textareas = document.querySelectorAll('.stChatInput textarea');
     textareas.forEach(textarea => {
@@ -522,4 +448,4 @@ function setupAutoResize() {
 setInterval(setupAutoResize, 500);
 setupAutoResize();
 </script>
-""", unsafe_allow_html=True)
+""", height=0)
