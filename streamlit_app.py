@@ -315,40 +315,33 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     reasoning_container = st.container()
     
     with reasoning_container:
-        # Create a placeholder for the dynamic reasoning display
-        reasoning_placeholder = st.empty()
+        # Create dynamic expander that updates with each step
+        expander_placeholder = st.empty()
         
         for i, step in enumerate(reasoning_steps):
             # Add current step to history
             st.session_state.current_reasoning_history.append(step)
             
-            # Update the reasoning display
-            with reasoning_placeholder.container():
-                # Create the grey reasoning box with expander
-                st.markdown(f"""
-                <div style="background-color: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 8px; margin: 16px 0; animation: fadeIn 0.3s ease-in;">
-                """, unsafe_allow_html=True)
+            # Update the expander with current content
+            with expander_placeholder.container():
+                # Use a unique key to maintain state
+                expander_key = f"reasoning_expander_{st.session_state.reasoning_step_counter}"
                 
-                # Use expander with dynamic content
-                with st.expander(f"▼ Thinking... step {i+1}/{len(reasoning_steps)}", expanded=False):
+                with st.expander(f"▼ Thinking step {i+1}/{len(reasoning_steps)}", expanded=False, key=expander_key):
                     # When expanded, show all steps accumulated so far
-                    st.markdown("<div style='max-height: 300px; overflow-y: auto;'>", unsafe_allow_html=True)
                     for j, hist_step in enumerate(st.session_state.current_reasoning_history):
                         st.markdown(f"""
                         <div class="reasoning-step">
                             <strong>Step {j+1}:</strong> {hist_step}
                         </div>
                         """, unsafe_allow_html=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
                 
-                # Always show current step outside expander (visible when collapsed)
+                # Show current step when collapsed (outside the expander)
                 st.markdown(f"""
-                <div style="padding: 0 16px 16px 16px; font-size: 16px; color: #2d2d2d; line-height: 1.5;">
-                    {step}
+                <div class="current-step">
+                    <strong>Current:</strong> {step}
                 </div>
                 """, unsafe_allow_html=True)
-                
-                st.markdown("</div>", unsafe_allow_html=True)
             
             time.sleep(2.5)  # Time to read the reasoning step
     
