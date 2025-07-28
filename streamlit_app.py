@@ -3,6 +3,29 @@ import time
 import random
 from openai import OpenAI
 
+def generate_reasoning_steps_for_credibility_task():
+    """Generate realistic reasoning steps for the social media credibility evaluation task."""
+    
+    reasoning_steps = [
+        "I need to evaluate this social media post about green tea and cancer prevention for credibility. Let me break down the claims systematically.",
+        
+        "First, I'll examine the specific claims: 1) A peer-reviewed Stanford study exists, 2) 50,000 participants over 10 years, 3) 87% cancer risk reduction from 3 cups daily, 4) 'Big Pharma doesn't want you to know.'",
+        
+        "Checking the methodology claims: A 10-year study with 50,000 participants sounds plausible for epidemiological research, but I need to verify if such a study actually exists from Stanford.",
+        
+        "The 87% risk reduction is an extremely high effect size that would be groundbreaking if true. Such dramatic results would typically be widely reported in major medical journals and news outlets.",
+        
+        "Red flags I'm noticing: 1) The 'Big Pharma conspiracy' language, 2) Urgency to 'share before they take it down,' 3) Hashtags like #GreenTeaCure suggest oversimplification, 4) No citation of the actual study.",
+        
+        "I should also consider what legitimate research says about green tea and cancer. While some studies suggest modest benefits, the scientific consensus doesn't support such dramatic claims.",
+        
+        "The post uses persuasive but unscientific language patterns common in health misinformation: definitive claims ('proves'), conspiracy theories, and emotional appeals.",
+        
+        "Based on my analysis, this appears to be misleading health information that could potentially harm people by promoting false hope or delaying proper medical care."
+    ]
+    
+    return reasoning_steps
+
 # Custom CSS to make it look more like ChatGPT
 st.markdown("""
 <style>
@@ -81,19 +104,12 @@ openai_api_key = st.secrets["openai_api_key"]
 
 # Create an OpenAI client.
 client = OpenAI(api_key=openai_api_key)
-    
+
 # Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "show_reasoning" not in st.session_state:
-    st.session_state.show_reasoning = True
 
-# Sidebar controls for research conditions
-with st.sidebar:
-    st.header("Research Controls")
-    st.session_state.show_reasoning = st.checkbox("Show Reasoning Process", value=True)
-    reasoning_length = st.selectbox("Reasoning Detail Level", ["Short", "Medium", "Long"])
-    reasoning_speed = st.slider("Reasoning Speed (seconds between steps)", 0.5, 3.0, 1.5)
+
 
 # Display existing messages
 for message in st.session_state.messages:
@@ -103,7 +119,7 @@ for message in st.session_state.messages:
             for reasoning_step in message["reasoning"]:
                 st.markdown(f"""
                 <div class="reasoning-block">
-                    <div class="reasoning-header">🧠 Reasoning Step</div>
+                    <div class="reasoning-header">🧠 Reasoning</div>
                     {reasoning_step}
                 </div>
                 """, unsafe_allow_html=True)
@@ -118,49 +134,45 @@ if prompt := st.chat_input("Ask me anything..."):
     
     # Generate assistant response with reasoning
     with st.chat_message("assistant"):
-        reasoning_steps = []
+        # Generate reasoning steps for the credibility task
+        reasoning_steps = generate_reasoning_steps_for_credibility_task()
         
-        if st.session_state.show_reasoning:
-            # Generate reasoning steps based on the prompt
-            reasoning_steps = generate_reasoning_steps(prompt, reasoning_length)
+        # Display reasoning steps with animation
+        reasoning_containers = []
+        for i, step in enumerate(reasoning_steps):
+            container = st.empty()
+            reasoning_containers.append(container)
             
-            # Display reasoning steps with animation
-            reasoning_containers = []
-            for i, step in enumerate(reasoning_steps):
-                container = st.empty()
-                reasoning_containers.append(container)
-                
-                # Show thinking indicator
-                container.markdown(f"""
-                <div class="thinking-indicator">
-                    🧠 Thinking<span class="dot-animation">...</span>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                time.sleep(reasoning_speed)
-                
-                # Show reasoning step
-                container.markdown(f"""
-                <div class="reasoning-block">
-                    <div class="reasoning-header">🧠 Reasoning Step {i+1}</div>
-                    {step}
-                </div>
-                """, unsafe_allow_html=True)
-        
-        # Generate final response
-        if st.session_state.show_reasoning:
-            thinking_container = st.empty()
-            thinking_container.markdown("""
+            # Show thinking indicator
+            container.markdown(f"""
             <div class="thinking-indicator">
-                🤖 Generating final response<span class="dot-animation">...</span>
+                🧠 Thinking<span class="dot-animation">...</span>
             </div>
             """, unsafe_allow_html=True)
-            time.sleep(1)
-            thinking_container.empty()
+            
+            time.sleep(1.5)  # Fixed timing for consistency
+            
+            # Show reasoning step
+            container.markdown(f"""
+            <div class="reasoning-block">
+                <div class="reasoning-header">🧠 Reasoning</div>
+                {step}
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Generate final response
+        thinking_container = st.empty()
+        thinking_container.markdown("""
+        <div class="thinking-indicator">
+            🤖 Generating final response<span class="dot-animation">...</span>
+        </div>
+        """, unsafe_allow_html=True)
+        time.sleep(1)
+        thinking_container.empty()
         
         # Get actual response from OpenAI
         stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="o1-mini",
             messages=[
                 {"role": m["role"], "content": m["content"]}
                 for m in st.session_state.messages
@@ -171,71 +183,5 @@ if prompt := st.chat_input("Ask me anything..."):
         response = st.write_stream(stream)
         
         # Store message with reasoning
-        message_data = {"role": "assistant", "content": response}
-        if st.session_state.show_reasoning:
-            message_data["reasoning"] = reasoning_steps
-        
+        message_data = {"role": "assistant", "content": response, "reasoning": reasoning_steps}
         st.session_state.messages.append(message_data)
-
-
-def generate_reasoning_steps(prompt, length="Medium"):
-    """Generate simulated reasoning steps based on the prompt and desired length."""
-    
-    # Base reasoning templates
-    analysis_steps = [
-        f"I need to analyze the question: '{prompt}'",
-        "Let me break this down into key components",
-        "I should consider multiple perspectives on this topic",
-        "I need to draw from relevant knowledge and examples"
-    ]
-    
-    domain_specific = []
-    prompt_lower = prompt.lower()
-    
-    # Add domain-specific reasoning based on prompt content
-    if any(word in prompt_lower for word in ["calculate", "math", "number", "compute"]):
-        domain_specific.extend([
-            "This appears to be a mathematical or computational problem",
-            "I should identify the relevant formulas or methods",
-            "Let me work through this step by step"
-        ])
-    elif any(word in prompt_lower for word in ["explain", "what is", "how does"]):
-        domain_specific.extend([
-            "This is a request for explanation or definition",
-            "I should provide clear, accurate information",
-            "I'll structure this in a logical, easy-to-follow way"
-        ])
-    elif any(word in prompt_lower for word in ["compare", "difference", "versus"]):
-        domain_specific.extend([
-            "This requires a comparative analysis",
-            "I should identify key similarities and differences",
-            "I'll organize this comparison systematically"
-        ])
-    elif any(word in prompt_lower for word in ["recommend", "suggest", "should I"]):
-        domain_specific.extend([
-            "This is asking for recommendations or advice",
-            "I should consider multiple factors and options",
-            "I need to provide balanced, helpful guidance"
-        ])
-    else:
-        domain_specific.extend([
-            "Let me consider the context and implications",
-            "I should provide a comprehensive response",
-            "I'll ensure my answer is helpful and accurate"
-        ])
-    
-    synthesis_steps = [
-        "Now I'll synthesize this information into a coherent response",
-        "I should ensure my answer directly addresses the question",
-        "Let me verify this reasoning makes sense"
-    ]
-    
-    all_steps = analysis_steps + domain_specific + synthesis_steps
-    
-    # Adjust based on length preference
-    if length == "Short":
-        return random.sample(all_steps, min(3, len(all_steps)))
-    elif length == "Medium":
-        return random.sample(all_steps, min(5, len(all_steps)))
-    else:  # Long
-        return all_steps[:7]  # Take first 7 to maintain logical flow
