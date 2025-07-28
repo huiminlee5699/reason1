@@ -114,16 +114,15 @@ if "messages" not in st.session_state:
 # Display existing messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        if message["role"] == "assistant" and "reasoning" in message:
-            # Display reasoning blocks if they exist
-            for reasoning_step in message["reasoning"]:
-                st.markdown(f"""
-                <div class="reasoning-block">
-                    <div class="reasoning-header">🧠 Reasoning</div>
-                    {reasoning_step}
-                </div>
-                """, unsafe_allow_html=True)
+        # Display the final answer
         st.markdown(message["content"])
+        
+        # If it's an assistant message with reasoning, show the dropdown
+        if message["role"] == "assistant" and "reasoning" in message:
+            thinking_duration = message.get("thinking_duration", 0)
+            with st.expander(f"💭 Thought for {thinking_duration} seconds"):
+                for i, step in enumerate(message["reasoning"], 1):
+                    st.markdown(f"**Step {i}:** {step}")
 
 # Chat input
 if prompt := st.chat_input("Ask me anything..."):
@@ -137,38 +136,47 @@ if prompt := st.chat_input("Ask me anything..."):
         # Generate reasoning steps for the credibility task
         reasoning_steps = generate_reasoning_steps_for_credibility_task()
         
-        # Display reasoning steps with animation
-        reasoning_containers = []
+        # Track timing for the "Thought for X seconds" feature
+        start_time = time.time()
+        
+        # Display reasoning steps with animation (each one replaces the previous)
+        reasoning_container = st.empty()
         for i, step in enumerate(reasoning_steps):
-            container = st.empty()
-            reasoning_containers.append(container)
-            
             # Show thinking indicator
-            container.markdown(f"""
+            reasoning_container.markdown(f"""
             <div class="thinking-indicator">
                 🧠 Thinking<span class="dot-animation">...</span>
             </div>
             """, unsafe_allow_html=True)
             
-            time.sleep(1.5)  # Fixed timing for consistency
+            time.sleep(1.0)  # Brief thinking pause
             
-            # Show reasoning step
-            container.markdown(f"""
+            # Show reasoning step (replaces previous)
+            reasoning_container.markdown(f"""
             <div class="reasoning-block">
                 <div class="reasoning-header">🧠 Reasoning</div>
                 {step}
             </div>
             """, unsafe_allow_html=True)
+            
+            time.sleep(2.0)  # Time to read the reasoning step
+        
+        # Clear the reasoning container
+        reasoning_container.empty()
+        
+        # Calculate total thinking time
+        end_time = time.time()
+        thinking_duration = int(end_time - start_time)
         
         # Generate final response
-        thinking_container = st.empty()
-        thinking_container.markdown("""
+        final_thinking_container = st.empty()
+        final_thinking_container.markdown("""
         <div class="thinking-indicator">
             🤖 Generating final response<span class="dot-animation">...</span>
         </div>
         """, unsafe_allow_html=True)
         time.sleep(1)
-        thinking_container.empty()
+        final_thinking_container.empty()
         
         # Get actual response from OpenAI
         stream = client.chat.completions.create(
@@ -182,6 +190,16 @@ if prompt := st.chat_input("Ask me anything..."):
         
         response = st.write_stream(stream)
         
-        # Store message with reasoning
-        message_data = {"role": "assistant", "content": response, "reasoning": reasoning_steps}
+        # Add the "Thought for X seconds" dropdown after the response
+        with st.expander(f"💭 Thought for {thinking_duration} seconds"):
+            for i, step in enumerate(reasoning_steps, 1):
+                st.markdown(f"**Step {i}:** {step}")
+        
+        # Store message with reasoning and timing
+        message_data = {
+            "role": "assistant", 
+            "content": response, 
+            "reasoning": reasoning_steps,
+            "thinking_duration": thinking_duration
+        }
         st.session_state.messages.append(message_data)
