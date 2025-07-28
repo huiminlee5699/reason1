@@ -363,6 +363,10 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     
     st.markdown("</div>", unsafe_allow_html=True)
     
+    # Calculate total thinking time for storage
+    end_time = time.time()
+    thinking_duration = int(end_time - start_time)
+    
     # Get actual response from OpenAI
     try:
         stream = client.chat.completions.create(
