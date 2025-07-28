@@ -341,7 +341,11 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     end_time = time.time()
     thinking_duration = int(end_time - start_time)
     
-    # Show the final "Thought for X seconds" dropdown
+    # Show the final "Thought for X seconds" dropdown with same grey styling
+    st.markdown(f"""
+    <div style="background-color: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 8px; margin: 8px 0;">
+    """, unsafe_allow_html=True)
+    
     with st.expander(f"Thought for {thinking_duration} seconds", expanded=False):
         for i, step in enumerate(reasoning_steps, 1):
             st.markdown(f"""
@@ -356,6 +360,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
             ✓ Done
         </div>
         """, unsafe_allow_html=True)
+    
+    st.markdown("</div>", unsafe_allow_html=True)
     
     # Get actual response from OpenAI
     try:
