@@ -76,10 +76,10 @@ st.markdown("""
 st.title("🤖 AI Reasoning Chat")
 st.write("Chat interface with visible AI reasoning process for research purposes.")
 
-# Use the API key from Streamlit secrets
-openai_api_key = st.secrets["openai_api_key"]
+# Get API key from secrets
+openai_api_key = st.secrets["OPENAI_API_KEY"]
 
-# Create an OpenAI client.
+# Create OpenAI client
 client = OpenAI(api_key=openai_api_key)
     
 # Initialize session state
