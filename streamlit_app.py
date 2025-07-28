@@ -341,9 +341,6 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
         # Add current step to history
         st.session_state.current_reasoning_history.append(step)
         
-        # Create a unique key for this step's expander
-        expander_key = f"reasoning_expander_{st.session_state.reasoning_step_counter}_{i}"
-        
         # Show accumulated reasoning in one container
         with reasoning_container.container():
             # Create the main reasoning box with current step highlighted
@@ -357,7 +354,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
             st.markdown(current_step_html, unsafe_allow_html=True)
             
             # Show dropdown with all accumulated reasoning
-            with st.expander("▼ View all reasoning steps", expanded=False, key=expander_key):
+            with st.expander("▼ View all reasoning steps", expanded=False):
                 for j, hist_step in enumerate(st.session_state.current_reasoning_history, 1):
                     st.markdown(f"**Step {j}:** {hist_step}")
                     if j < len(st.session_state.current_reasoning_history):
