@@ -311,43 +311,28 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     # Track timing for the "Thought for X seconds" feature
     start_time = time.time()
     
-    # Create a single persistent grey reasoning box
-    st.markdown("""
-    <div style="background-color: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 8px; margin: 16px 0;">
-    """, unsafe_allow_html=True)
+    # Display reasoning in flashing grey boxes that appear and disappear
+    reasoning_container = st.container()
     
-    # Create placeholders for dynamic content within the grey box
-    expander_placeholder = st.empty()
-    current_step_placeholder = st.empty()
+    with reasoning_container:
+        # Create a placeholder for the flashing reasoning box
+        box_content = st.empty()
+        
+        for i, step in enumerate(reasoning_steps):
+            # Add current step to history
+            st.session_state.current_reasoning_history.append(step)
+            
+            # Display current step in a flashing grey box
+            box_content.markdown(f"""
+            <div style="background-color: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 8px; padding: 16px; margin: 8px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; color: #2d2d2d; line-height: 1.5; animation: fadeIn 0.3s ease-in;">
+                {step}
+            </div>
+            """, unsafe_allow_html=True)
+            
+            time.sleep(2.5)  # Time to read the reasoning step
     
-    for i, step in enumerate(reasoning_steps):
-        # Add current step to history
-        st.session_state.current_reasoning_history.append(step)
-        
-        # Update the expander content
-        with expander_placeholder.container():
-            with st.expander(f"▼ Thinking... step {i+1}/{len(reasoning_steps)}", expanded=False):
-                # When expanded, show all steps accumulated so far
-                st.markdown("<div style='max-height: 300px; overflow-y: auto;'>", unsafe_allow_html=True)
-                for j, hist_step in enumerate(st.session_state.current_reasoning_history):
-                    st.markdown(f"""
-                    <div class="reasoning-step">
-                        <strong>Step {j+1}:</strong> {hist_step}
-                    </div>
-                    """, unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-        
-        # Update the current step (visible when collapsed)
-        current_step_placeholder.markdown(f"""
-        <div style="padding: 0 16px 16px 16px; font-size: 16px; color: #2d2d2d; line-height: 1.5;">
-            {step}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        time.sleep(2.5)  # Time to read the reasoning step
-    
-    # Close the grey box
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Clear the flashing reasoning container
+    reasoning_container.empty()
     
     # Clear the reasoning container
     reasoning_container.empty()
