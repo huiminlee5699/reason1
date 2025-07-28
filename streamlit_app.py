@@ -78,8 +78,8 @@ st.write("Chat interface with visible AI reasoning process for research purposes
 
 # Get API key from secrets
 openai_api_key = st.secrets["OPENAI_API_KEY"]
-    # Create OpenAI client
-    client = OpenAI(api_key=openai_api_key)
+# Create OpenAI client
+client = OpenAI(api_key=openai_api_key)
     
 # Initialize session state
 if "messages" not in st.session_state:
