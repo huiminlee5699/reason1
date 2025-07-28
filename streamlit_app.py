@@ -57,10 +57,14 @@ st.markdown("""
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         font-size: 16px;
         color: #2d2d2d;
-        animation: fadeIn 0.3s ease-in;
         max-width: 80%;
         text-align: left;
         position: relative;
+    }
+    
+    .current-reasoning-step {
+        animation: fadeIn 0.3s ease-in;
+        line-height: 1.5;
     }
     
     .user-message {
@@ -204,22 +208,43 @@ st.markdown("""
     
     /* Style for reasoning history expanders */
     details[data-testid="stExpander"] {
-        border: 1px solid #e1e5e9;
-        border-radius: 6px;
-        margin: 8px 0;
-        background-color: #fafafa;
+        border: none !important;
+        border-radius: 0 !important;
+        margin: 12px 0 0 0 !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
     }
     
     details[data-testid="stExpander"] summary {
-        padding: 8px 12px;
-        cursor: pointer;
-        font-size: 13px;
-        color: #6b7280;
-        border-radius: 6px;
+        padding: 8px 0 !important;
+        cursor: pointer !important;
+        font-size: 13px !important;
+        color: #6b7280 !important;
+        border-radius: 0 !important;
+        background: none !important;
+        border: none !important;
+        border-top: 1px solid #e1e5e9 !important;
+        margin-top: 8px !important;
     }
     
     details[data-testid="stExpander"] summary:hover {
-        background-color: #f3f4f6;
+        background-color: rgba(243, 244, 246, 0.5) !important;
+        color: #4b5563 !important;
+    }
+    
+    details[data-testid="stExpander"][open] summary {
+        margin-bottom: 12px !important;
+    }
+    
+    /* Style the expander content */
+    .streamlit-expanderContent {
+        background-color: #ffffff !important;
+        border: 1px solid #e1e5e9 !important;
+        border-radius: 6px !important;
+        padding: 12px !important;
+        margin-top: 8px !important;
+        max-height: 300px !important;
+        overflow-y: auto !important;
     }
 </style>
 
@@ -309,35 +334,36 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     # Track timing for the "Thought for X seconds" feature
     start_time = time.time()
     
-    # Display reasoning steps with blinking animation and clickable dropdown functionality
+    # Display reasoning steps in one persistent container with dropdown
     reasoning_container = st.empty()
     
     for i, step in enumerate(reasoning_steps):
         # Add current step to history
         st.session_state.current_reasoning_history.append(step)
         
-        # Show current reasoning step in a container
+        # Create a unique key for this step's expander
+        expander_key = f"reasoning_expander_{st.session_state.reasoning_step_counter}_{i}"
+        
+        # Show accumulated reasoning in one container
         with reasoning_container.container():
-            # Current reasoning step
-            st.markdown(f"""
+            # Create the main reasoning box with current step highlighted
+            current_step_html = f"""
             <div class="reasoning-block">
-                {step}
+                <div class="current-reasoning-step">
+                    {step}
+                </div>
             </div>
-            """, unsafe_allow_html=True)
+            """
+            st.markdown(current_step_html, unsafe_allow_html=True)
             
-            # Show expandable history using Streamlit's expander
-            if len(st.session_state.current_reasoning_history) > 1:
-                with st.expander("💭 View reasoning history", expanded=False):
-                    for j, hist_step in enumerate(st.session_state.current_reasoning_history, 1):
-                        st.markdown(f"**Step {j}:** {hist_step}")
+            # Show dropdown with all accumulated reasoning
+            with st.expander("▼ View all reasoning steps", expanded=False, key=expander_key):
+                for j, hist_step in enumerate(st.session_state.current_reasoning_history, 1):
+                    st.markdown(f"**Step {j}:** {hist_step}")
+                    if j < len(st.session_state.current_reasoning_history):
+                        st.markdown("---")
         
         time.sleep(2.5)  # Time to read the reasoning step
-        
-        # Clear for fade effect (except for last step)
-        if i < len(reasoning_steps) - 1:
-            time.sleep(0.3)
-            reasoning_container.empty()
-            time.sleep(0.5)
     
     # Clear the reasoning container
     reasoning_container.empty()
