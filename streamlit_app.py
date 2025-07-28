@@ -60,11 +60,19 @@ st.markdown("""
         max-width: 80%;
         text-align: left;
         position: relative;
+        line-height: 1.5;
     }
     
-    .current-reasoning-step {
+    .reasoning-block.current-step {
         animation: fadeIn 0.3s ease-in;
-        line-height: 1.5;
+        border-color: #d1d5db;
+        background-color: #f8f9fa;
+    }
+    
+    .reasoning-block.previous-step {
+        opacity: 0.7;
+        background-color: #f3f4f6;
+        border-color: #e5e7eb;
     }
     
     .user-message {
@@ -334,31 +342,41 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     # Track timing for the "Thought for X seconds" feature
     start_time = time.time()
     
-    # Display reasoning steps in one persistent container with dropdown
+    # Display reasoning steps as accumulating grey boxes with dropdown
     reasoning_container = st.empty()
     
     for i, step in enumerate(reasoning_steps):
         # Add current step to history
         st.session_state.current_reasoning_history.append(step)
         
-        # Show accumulated reasoning in one container
-        with reasoning_container.container():
-            # Create the main reasoning box with current step highlighted
-            current_step_html = f"""
-            <div class="reasoning-block">
-                <div class="current-reasoning-step">
-                    {step}
+        # Build HTML for all accumulated reasoning steps
+        accumulated_html = ""
+        for j, hist_step in enumerate(st.session_state.current_reasoning_history):
+            # Highlight the current (latest) step
+            if j == len(st.session_state.current_reasoning_history) - 1:
+                accumulated_html += f"""
+                <div class="reasoning-block current-step">
+                    {hist_step}
                 </div>
-            </div>
-            """
-            st.markdown(current_step_html, unsafe_allow_html=True)
+                """
+            else:
+                accumulated_html += f"""
+                <div class="reasoning-block previous-step">
+                    {hist_step}
+                </div>
+                """
+        
+        # Show all accumulated reasoning boxes with dropdown
+        with reasoning_container.container():
+            st.markdown(accumulated_html, unsafe_allow_html=True)
             
-            # Show dropdown with all accumulated reasoning
-            with st.expander("▼ View all reasoning steps", expanded=False):
-                for j, hist_step in enumerate(st.session_state.current_reasoning_history, 1):
-                    st.markdown(f"**Step {j}:** {hist_step}")
-                    if j < len(st.session_state.current_reasoning_history):
-                        st.markdown("---")
+            # Show dropdown with organized view of all steps
+            if len(st.session_state.current_reasoning_history) > 1:
+                with st.expander("▼ View organized reasoning steps", expanded=False):
+                    for j, hist_step in enumerate(st.session_state.current_reasoning_history, 1):
+                        st.markdown(f"**Step {j}:** {hist_step}")
+                        if j < len(st.session_state.current_reasoning_history):
+                            st.markdown("---")
         
         time.sleep(2.5)  # Time to read the reasoning step
     
