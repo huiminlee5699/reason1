@@ -81,100 +81,100 @@ openai_api_key = st.secrets["OPENAI_API_KEY"]
     # Create OpenAI client
     client = OpenAI(api_key=openai_api_key)
     
-    # Initialize session state
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    if "show_reasoning" not in st.session_state:
-        st.session_state.show_reasoning = True
-    
-    # Sidebar controls for research conditions
-    with st.sidebar:
-        st.header("Research Controls")
-        st.session_state.show_reasoning = st.checkbox("Show Reasoning Process", value=True)
-        reasoning_length = st.selectbox("Reasoning Detail Level", ["Short", "Medium", "Long"])
-        reasoning_speed = st.slider("Reasoning Speed (seconds between steps)", 0.5, 3.0, 1.5)
-    
-    # Display existing messages
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            if message["role"] == "assistant" and "reasoning" in message:
-                # Display reasoning blocks if they exist
-                for reasoning_step in message["reasoning"]:
-                    st.markdown(f"""
-                    <div class="reasoning-block">
-                        <div class="reasoning-header">🧠 Reasoning Step</div>
-                        {reasoning_step}
-                    </div>
-                    """, unsafe_allow_html=True)
-            st.markdown(message["content"])
-    
-    # Chat input
-    if prompt := st.chat_input("Ask me anything..."):
-        # Add user message
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        
-        # Generate assistant response with reasoning
-        with st.chat_message("assistant"):
-            reasoning_steps = []
-            
-            if st.session_state.show_reasoning:
-                # Generate reasoning steps based on the prompt
-                reasoning_steps = generate_reasoning_steps(prompt, reasoning_length)
-                
-                # Display reasoning steps with animation
-                reasoning_containers = []
-                for i, step in enumerate(reasoning_steps):
-                    container = st.empty()
-                    reasoning_containers.append(container)
-                    
-                    # Show thinking indicator
-                    container.markdown(f"""
-                    <div class="thinking-indicator">
-                        🧠 Thinking<span class="dot-animation">...</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    time.sleep(reasoning_speed)
-                    
-                    # Show reasoning step
-                    container.markdown(f"""
-                    <div class="reasoning-block">
-                        <div class="reasoning-header">🧠 Reasoning Step {i+1}</div>
-                        {step}
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            # Generate final response
-            if st.session_state.show_reasoning:
-                thinking_container = st.empty()
-                thinking_container.markdown("""
-                <div class="thinking-indicator">
-                    🤖 Generating final response<span class="dot-animation">...</span>
+# Initialize session state
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "show_reasoning" not in st.session_state:
+    st.session_state.show_reasoning = True
+
+# Sidebar controls for research conditions
+with st.sidebar:
+    st.header("Research Controls")
+    st.session_state.show_reasoning = st.checkbox("Show Reasoning Process", value=True)
+    reasoning_length = st.selectbox("Reasoning Detail Level", ["Short", "Medium", "Long"])
+    reasoning_speed = st.slider("Reasoning Speed (seconds between steps)", 0.5, 3.0, 1.5)
+
+# Display existing messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        if message["role"] == "assistant" and "reasoning" in message:
+            # Display reasoning blocks if they exist
+            for reasoning_step in message["reasoning"]:
+                st.markdown(f"""
+                <div class="reasoning-block">
+                    <div class="reasoning-header">🧠 Reasoning Step</div>
+                    {reasoning_step}
                 </div>
                 """, unsafe_allow_html=True)
-                time.sleep(1)
-                thinking_container.empty()
+        st.markdown(message["content"])
+
+# Chat input
+if prompt := st.chat_input("Ask me anything..."):
+    # Add user message
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    
+    # Generate assistant response with reasoning
+    with st.chat_message("assistant"):
+        reasoning_steps = []
+        
+        if st.session_state.show_reasoning:
+            # Generate reasoning steps based on the prompt
+            reasoning_steps = generate_reasoning_steps(prompt, reasoning_length)
             
-            # Get actual response from OpenAI
-            stream = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": m["role"], "content": m["content"]}
-                    for m in st.session_state.messages
-                ],
-                stream=True,
-            )
-            
-            response = st.write_stream(stream)
-            
-            # Store message with reasoning
-            message_data = {"role": "assistant", "content": response}
-            if st.session_state.show_reasoning:
-                message_data["reasoning"] = reasoning_steps
-            
-            st.session_state.messages.append(message_data)
+            # Display reasoning steps with animation
+            reasoning_containers = []
+            for i, step in enumerate(reasoning_steps):
+                container = st.empty()
+                reasoning_containers.append(container)
+                
+                # Show thinking indicator
+                container.markdown(f"""
+                <div class="thinking-indicator">
+                    🧠 Thinking<span class="dot-animation">...</span>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                time.sleep(reasoning_speed)
+                
+                # Show reasoning step
+                container.markdown(f"""
+                <div class="reasoning-block">
+                    <div class="reasoning-header">🧠 Reasoning Step {i+1}</div>
+                    {step}
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # Generate final response
+        if st.session_state.show_reasoning:
+            thinking_container = st.empty()
+            thinking_container.markdown("""
+            <div class="thinking-indicator">
+                🤖 Generating final response<span class="dot-animation">...</span>
+            </div>
+            """, unsafe_allow_html=True)
+            time.sleep(1)
+            thinking_container.empty()
+        
+        # Get actual response from OpenAI
+        stream = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages
+            ],
+            stream=True,
+        )
+        
+        response = st.write_stream(stream)
+        
+        # Store message with reasoning
+        message_data = {"role": "assistant", "content": response}
+        if st.session_state.show_reasoning:
+            message_data["reasoning"] = reasoning_steps
+        
+        st.session_state.messages.append(message_data)
 
 
 def generate_reasoning_steps(prompt, length="Medium"):
