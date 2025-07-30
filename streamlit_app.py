@@ -1,7 +1,6 @@
 import streamlit as st
 import time
-import random
-from openai import OpenAI
+import asyncio
 
 def generate_reasoning_steps_for_credibility_task():
     """Generate realistic reasoning steps for the social media credibility evaluation task."""
@@ -26,6 +25,27 @@ def generate_reasoning_steps_for_credibility_task():
     
     return reasoning_steps
 
+def get_fixed_response():
+    """Return the fixed response for the credibility evaluation."""
+    return """Based on my search of recent Stanford research and the broader scientific literature on green tea and cancer, **this post should be flagged as misleading**. Here's why:
+
+**Red Flags in the Post:**
+1. **No verifiable study found**: Despite searching Stanford's recent cancer research, I found no study matching these claims. Stanford researchers are currently working on AI cancer prediction tools, new surgical techniques, and immunotherapies - but nothing about green tea.
+2. **Exaggerated language**: The use of "PROVES" is a major red flag. Scientific studies show "mixed" evidence for green tea's cancer-fighting properties, with some studies showing "promising correlations" while others "have found little to no significant impact on cancer incidence" Green tea and cancer | EBSCO Research Starters.
+3. **Unrealistic claim**: An 87% reduction in cancer risk would be extraordinary and would be front-page news worldwide. Current research shows "mixed findings" for most cancer types and "mostly null association" for several others Green tea and cancer and cardiometabolic diseases: a review of the current epidemiological evidence | European Journal of Clinical Nutrition.
+4. **Conspiracy theory elements**: "Big Pharma doesn't want you to know" and "Share before they take it down" are classic misinformation tactics designed to bypass critical thinking.
+
+**What the Science Actually Shows:**
+Research indicates green tea "may be linked to a reduced risk of certain cancers, particularly stomach cancer in populations with high green tea consumption" but "clinical evidence regarding green tea's cancer-fighting properties is mixed" Green tea and cancer | EBSCO Research Starters. For most cancer types, studies show "mixed findings" or "mostly null association" Green tea and cancer and cardiometabolic diseases: a review of the current epidemiological evidence | European Journal of Clinical Nutrition.
+
+**Recommendations for Users:**
+1. **Don't share** - This appears to be health misinformation
+2. **Check sources** - Look for peer-reviewed studies with proper citations
+3. **Be skeptical** of dramatic health claims with conspiracy elements
+4. **Consult healthcare providers** for evidence-based health information
+
+**Verdict**: This post is misleading and potentially harmful as it may encourage people to rely on unsubstantiated claims rather than proven cancer prevention methods."""
+
 # Custom CSS for clean, minimal ChatGPT-like interface
 st.markdown("""
 <style>
@@ -40,12 +60,6 @@ st.markdown("""
         color: #2d2d2d;
         margin-bottom: 30px;
         margin-top: 20px;
-    }
-    
-    .chat-container {
-        max-width: 1000px;
-        margin: 0 auto;
-        padding: 20px;
     }
     
     .user-message {
@@ -116,35 +130,10 @@ st.markdown("""
         to { opacity: 1; transform: translateY(0); }
     }
     
-    /* Hide default Streamlit chat styling */
-    .stChatMessage {
-        background: none !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    
-    .stChatMessage > div {
-        background: none !important;
-        border: none !important;
-        padding: 0 !important;
-    }
-    
     /* Auto-expanding chat input */
     .stChatInput {
         max-width: 1000px;
         margin: 0 auto;
-    }
-    
-    .stChatInput textarea {
-        min-height: 48px !important;
-        max-height: 200px !important;
-        resize: none !important;
-        font-size: 16px !important;
-        line-height: 1.5 !important;
-        overflow-y: auto !important;
-        transition: height 0.2s ease !important;
     }
     
     /* Make container wider */
@@ -154,7 +143,7 @@ st.markdown("""
         padding-right: 2rem;
     }
     
-    /* Grey reasoning dropdown styling */
+    /* Reasoning dropdown styling */
     .reasoning-dropdown {
         background-color: #f8f9fa !important;
         border: 1px solid #e1e5e9 !important;
@@ -163,7 +152,36 @@ st.markdown("""
         animation: fadeIn 0.3s ease-in;
     }
     
-    /* Style for reasoning expander */
+    .reasoning-step {
+        margin-bottom: 16px;
+        padding: 12px;
+        background-color: #ffffff;
+        border-radius: 6px;
+        border-left: 3px solid #e1e5e9;
+        line-height: 1.5;
+        font-size: 16px;
+        color: #2d2d2d;
+        animation: fadeIn 0.4s ease-out;
+    }
+    
+    .thinking-header {
+        color: #6b7280;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 16px;
+        background-color: #f8f9fa;
+        border-radius: 8px 8px 0 0;
+        border-bottom: 1px solid #e1e5e9;
+        margin: 0;
+    }
+    
+    .reasoning-content {
+        padding: 0 16px 16px 16px;
+        background-color: #f8f9fa;
+        border-radius: 0 0 8px 8px;
+    }
+    
+    /* Style streamlit expander to match our design */
     details[data-testid="stExpander"] {
         background-color: #f8f9fa !important;
         border: 1px solid #e1e5e9 !important;
@@ -195,43 +213,18 @@ st.markdown("""
         margin-bottom: 0 !important;
     }
     
-    /* Style the expander content */
     .streamlit-expanderContent {
         background-color: #f8f9fa !important;
         border: none !important;
         border-radius: 0 0 8px 8px !important;
-        padding: 0 16px 16px 16px !important;
+        padding: 0 !important;
         margin: 0 !important;
-    }
-    
-    .reasoning-step {
-        margin-bottom: 16px;
-        padding: 12px;
-        background-color: #ffffff;
-        border-radius: 6px;
-        border-left: 3px solid #e1e5e9;
-        line-height: 1.5;
-        font-size: 16px;
-        color: #2d2d2d;
-    }
-    
-    .current-step {
-        font-size: 16px;
-        color: #2d2d2d;
-        line-height: 1.5;
-        padding: 0 16px 16px 16px;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # Show title
 st.markdown('<h1 class="main-title">What\'s on the agenda today?</h1>', unsafe_allow_html=True)
-
-# Use the API key from Streamlit secrets
-openai_api_key = st.secrets["openai_api_key"]
-
-# Create an OpenAI client.
-client = OpenAI(api_key=openai_api_key)
 
 # Initialize session state
 if "messages" not in st.session_state:
@@ -240,25 +233,23 @@ if "current_reasoning_history" not in st.session_state:
     st.session_state.current_reasoning_history = []
 if "reasoning_step_counter" not in st.session_state:
     st.session_state.reasoning_step_counter = 0
+if "show_reasoning_live" not in st.session_state:
+    st.session_state.show_reasoning_live = False
+if "current_step_index" not in st.session_state:
+    st.session_state.current_step_index = 0
+if "reasoning_complete" not in st.session_state:
+    st.session_state.reasoning_complete = False
 
-# Display existing messages with custom styling
+# Display existing messages
 for message in st.session_state.messages:
     if message["role"] == "user":
-        # User message - right aligned, light grey
         st.markdown(f"""
         <div class="user-message">
             {message["content"]}
         </div>
         """, unsafe_allow_html=True)
     else:
-        # Assistant message - left aligned
-        st.markdown(f"""
-        <div class="assistant-message">
-            {message["content"]}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # If it's an assistant message with reasoning, show the dropdown
+        # Show reasoning dropdown if present
         if "reasoning" in message:
             thinking_duration = message.get("thinking_duration", 0)
             with st.expander(f"Thought for {thinking_duration} seconds", expanded=False):
@@ -269,83 +260,99 @@ for message in st.session_state.messages:
                     </div>
                     """, unsafe_allow_html=True)
                 
-                # Add "Done" indicator at the end
                 st.markdown("""
                 <div class="done-indicator">
                     ✓ Done
                 </div>
                 """, unsafe_allow_html=True)
-            
-            # Add action buttons (copy, upvote, downvote)
-            st.markdown("""
-            <div class="action-buttons">
-                <button class="action-button" onclick="navigator.clipboard.writeText(document.querySelector('.assistant-message').innerText)" title="Copy">
-                    📋
-                </button>
-                <button class="action-button" title="Upvote">
-                    👍
-                </button>
-                <button class="action-button" title="Downvote">
-                    👎
-                </button>
-            </div>
-            """, unsafe_allow_html=True)
+        
+        # Assistant message
+        st.markdown(f"""
+        <div class="assistant-message">
+            {message["content"]}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Add action buttons
+        st.markdown("""
+        <div class="action-buttons">
+            <button class="action-button" title="Copy">📋</button>
+            <button class="action-button" title="Upvote">👍</button>
+            <button class="action-button" title="Downvote">👎</button>
+        </div>
+        """, unsafe_allow_html=True)
 
 # Chat input
 if prompt := st.chat_input("Ask anything..."):
-    # Add user message - will be displayed with custom styling above
+    # Add user message
     st.session_state.messages.append({"role": "user", "content": prompt})
     
-    # Force a rerun to show the user message first
-    st.rerun()
+    # Show user message immediately
+    st.markdown(f"""
+    <div class="user-message">
+        {prompt}
+    </div>
+    """, unsafe_allow_html=True)
     
-# Generate AI response if there's a new user message
-if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
-    # Reset reasoning history for new conversation
+    # Reset reasoning state
     st.session_state.current_reasoning_history = []
     st.session_state.reasoning_step_counter += 1
+    st.session_state.show_reasoning_live = False
+    st.session_state.current_step_index = 0
+    st.session_state.reasoning_complete = False
     
-    # Generate reasoning steps for the credibility task
+    # Generate reasoning steps
     reasoning_steps = generate_reasoning_steps_for_credibility_task()
     
-    # Track timing for the "Thought for X seconds" feature
+    # Track timing
     start_time = time.time()
     
-    # Display reasoning in flashing grey boxes that appear and disappear
-    reasoning_container = st.container()
+    # Create the "Thinking..." dropdown
+    thinking_expander = st.expander("Thinking...", expanded=False)
     
-    with reasoning_container:
-        # Create a placeholder for the flashing reasoning box
-        box_content = st.empty()
-        
-        for i, step in enumerate(reasoning_steps):
-            # Add current step to history
-            st.session_state.current_reasoning_history.append(step)
+    # Check if user clicked the dropdown
+    if thinking_expander:
+        st.session_state.show_reasoning_live = True
+    
+    # If user opened the dropdown, show reasoning steps progressively
+    if st.session_state.show_reasoning_live:
+        with thinking_expander:
+            reasoning_container = st.container()
             
-            # Display current step in a flashing grey box
-            box_content.markdown(f"""
-            <div style="background-color: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 8px; padding: 16px; margin: 8px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; color: #2d2d2d; line-height: 1.5; animation: fadeIn 0.3s ease-in;">
-                {step}
+            # Show reasoning steps progressively
+            for i, step in enumerate(reasoning_steps):
+                with reasoning_container:
+                    # Show all previous steps plus current one
+                    for j in range(i + 1):
+                        st.markdown(f"""
+                        <div class="reasoning-step">
+                            <strong>Step {j + 1}:</strong> {reasoning_steps[j]}
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                # Wait before showing next step
+                time.sleep(2.5)
+            
+            # Show "Done" indicator
+            st.markdown("""
+            <div class="done-indicator">
+                ✓ Done
             </div>
             """, unsafe_allow_html=True)
-            
-            time.sleep(2.5)  # Time to read the reasoning step
     
-    # Clear the flashing reasoning container
-    reasoning_container.empty()
+    # If user didn't open dropdown, just wait for the total duration
+    else:
+        total_wait_time = len(reasoning_steps) * 2.5
+        time.sleep(total_wait_time)
     
-    # Clear the reasoning container
-    reasoning_container.empty()
-    
-    # Calculate total thinking time
+    # Calculate thinking duration
     end_time = time.time()
     thinking_duration = int(end_time - start_time)
     
-    # Show the final "Thought for X seconds" dropdown with same grey styling
-    st.markdown(f"""
-    <div style="background-color: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 8px; margin: 8px 0;">
-    """, unsafe_allow_html=True)
+    # Clear the "Thinking..." and show final dropdown
+    thinking_expander.empty()
     
+    # Show final reasoning dropdown
     with st.expander(f"Thought for {thinking_duration} seconds", expanded=False):
         for i, step in enumerate(reasoning_steps, 1):
             st.markdown(f"""
@@ -354,107 +361,46 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
             </div>
             """, unsafe_allow_html=True)
         
-        # Add "Done" indicator at the end
         st.markdown("""
         <div class="done-indicator">
             ✓ Done
         </div>
         """, unsafe_allow_html=True)
     
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Get and display the response with typing effect
+    fixed_response = get_fixed_response()
+    response_placeholder = st.empty()
+    displayed_response = ""
     
-    # Calculate total thinking time for storage
-    end_time = time.time()
-    thinking_duration = int(end_time - start_time)
+    # Split response into words for typing effect
+    words = fixed_response.split(' ')
     
-    # Get actual response from OpenAI
-    try:
-        stream = client.chat.completions.create(
-            model="o1-mini",
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
-        )
-        
-        # Capture the response
-        response_placeholder = st.empty()
-        full_response = ""
-        
-        for chunk in stream:
-            if chunk.choices[0].delta.content is not None:
-                full_response += chunk.choices[0].delta.content
-                response_placeholder.markdown(f"""
-                <div class="assistant-message">
-                    {full_response}
-                </div>
-                """, unsafe_allow_html=True)
-        
-        # Add action buttons (copy, upvote, downvote)
-        st.markdown("""
-        <div class="action-buttons">
-            <button class="action-button" onclick="navigator.clipboard.writeText(document.querySelector('.assistant-message').innerText)" title="Copy">
-                📋
-            </button>
-            <button class="action-button" title="Upvote">
-                👍
-            </button>
-            <button class="action-button" title="Downvote">
-                👎
-            </button>
+    for i, word in enumerate(words):
+        displayed_response += word + ' '
+        response_placeholder.markdown(f"""
+        <div class="assistant-message">
+            {displayed_response}
         </div>
         """, unsafe_allow_html=True)
-        
-        # Store message with reasoning and timing
-        message_data = {
-            "role": "assistant", 
-            "content": full_response, 
-            "reasoning": reasoning_steps,
-            "thinking_duration": thinking_duration
-        }
-        st.session_state.messages.append(message_data)
-        
-    except Exception as e:
-        st.error(f"Error generating response: {str(e)}")
-
-# Add JavaScript for auto-resizing functionality
-st.components.v1.html("""
-<script>
-function setupAutoResize() {
-    const textareas = document.querySelectorAll('.stChatInput textarea');
-    textareas.forEach(textarea => {
-        if (!textarea.hasAttribute('data-auto-resize-setup')) {
-            textarea.setAttribute('data-auto-resize-setup', 'true');
-            
-            // Set initial height
-            textarea.style.height = '48px';
-            
-            textarea.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-            });
-            
-            textarea.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    setTimeout(() => {
-                        this.style.height = '48px';
-                    }, 100);
-                }
-            });
-            
-            // Reset height when textarea is empty
-            textarea.addEventListener('blur', function() {
-                if (this.value.trim() === '') {
-                    this.style.height = '48px';
-                }
-            });
-        }
-    });
-}
-
-// Run setup periodically to catch new elements
-setInterval(setupAutoResize, 500);
-setupAutoResize();
-</script>
-""", height=0)
+        time.sleep(0.02)  # Fast typing speed
+    
+    # Add action buttons
+    st.markdown("""
+    <div class="action-buttons">
+        <button class="action-button" title="Copy">📋</button>
+        <button class="action-button" title="Upvote">👍</button>
+        <button class="action-button" title="Downvote">👎</button>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Store message with reasoning
+    message_data = {
+        "role": "assistant", 
+        "content": fixed_response, 
+        "reasoning": reasoning_steps,
+        "thinking_duration": thinking_duration
+    }
+    st.session_state.messages.append(message_data)
+    
+    # Rerun to show the conversation properly
+    st.rerun()
